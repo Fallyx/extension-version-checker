@@ -54,23 +54,36 @@ print color('reset');
 for my $i (0 .. $#urls) {
     my $url = $urls[$i];
     my $res = $version->scrape(URI->new($url));
-    print "$urlNames[$i]: $res->{ver} -> ";
-    
+    print "$urlNames[$i]: $lines[$i] -> ";
+
     if ($res->{ver} eq $lines[$i]) {
         print color('green');
-        
     } else {
         print color('red');
+
         my $slashPos = rindex($url, '/');
         my $extId = substr($url, $slashPos + 1);
 
         my $dlUrlextId = $dlUrl;
         $dlUrlextId =~ s/%s/$extId/i;
 
-        my $file = "./downloads/$urlNames[$i].crx";
-        getstore($dlUrlextId, $file);
+        my $dlFile = "./downloads/$urlNames[$i].crx";
+        getstore($dlUrlextId, $dlFile);
+
+        $lines[$i] = $res->{ver};
     }
 
-    print "$lines[$i]\n";
+    print "$res->{ver}\n";
     print color('reset');
 }
+
+unless (open $handle, '>', $file) {
+    print STDERR "Could not open file";
+    return undef;
+}
+
+foreach (@lines) {
+    print $handle "$_\n";
+}
+
+close($handle);
