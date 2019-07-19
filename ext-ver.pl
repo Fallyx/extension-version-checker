@@ -3,8 +3,12 @@ use strict;
 use warnings;
 
 use URI;
-use Web::Scraper;
 use Encode;
+use Web::Scraper;
+use Term::ANSIColor;
+use LWP::Simple;
+
+my $dlUrl = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=75.0&x=id%3D%s%26installsource%3Dondemand%26uc"; # %s needs to be replaced
 
 my @urls = (
     "https://chrome.google.com/webstore/detail/4chan-x/ohnjgmpcibpbafdlkimncjhflgedgpam", # 4chan x
@@ -31,11 +35,42 @@ my @urlNames = (
     "uBlock origin extra",
 );
 
+my $handle;
+my $file = "installed_version.txt";
+unless (open $handle, "<", $file) {
+    print STDERR "Could not open file";
+    return undef;
+}
+
+chomp (my @lines = <$handle>);
+close $handle;
+
 my $version = scraper {
     process_first ".C-b-p-D-Xe.h-C-b-p-D-md", ver => 'TEXT';
 };
 
+print color('reset');
+
 for my $i (0 .. $#urls) {
-    my $res = $version->scrape(URI->new($urls[$i]));
-    print Encode::encode("utf8", "$urlNames[$i]: $res->{ver}\n");
+    my $url = $urls[$i];
+    my $res = $version->scrape(URI->new($url));
+    print "$urlNames[$i]: $res->{ver} -> ";
+    
+    if ($res->{ver} eq $lines[$i]) {
+        print color('green');
+        
+    } else {
+        print color('red');
+        my $slashPos = rindex($url, '/');
+        my $extId = substr($url, $slashPos + 1);
+
+        my $dlUrlextId = $dlUrl;
+        $dlUrlextId =~ s/%s/$extId/i;
+
+        my $file = "./downloads/$urlNames[$i].crx";
+        getstore($dlUrlextId, $file);
+    }
+
+    print "$lines[$i]\n";
+    print color('reset');
 }
