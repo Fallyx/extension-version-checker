@@ -13,21 +13,23 @@ use Net::DBus;
 
 my $notify_update = 0;
 
-# %s needs to be replaced
-my $dl_url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=75.0&x=id%3D%s%26installsource%3Dondemand%26uc";
-
 my $json_file = 'extensions.json';
 my $json_file_content = read_file($json_file);
 my $decoded_extensions_ref = decode_json($json_file_content);
 my %decoded_extensions = %$decoded_extensions_ref;
 
+my $chrome_version = $decoded_extensions{'chrome-version'};
+
+# %s needs to be replaced
+my $dl_url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=$chrome_version&x=id%3D%s%26installsource%3Dondemand%26uc";
+
 my $version_scraper = scraper {
     process_first ".C-b-p-D-Xe.h-C-b-p-D-md", ver => 'TEXT';
 };
 
-foreach my $ext_name (keys %decoded_extensions) {
-    my $url = $decoded_extensions{$ext_name}{url};
-    my $version = $decoded_extensions{$ext_name}{version};
+foreach my $ext_name (keys %{ $decoded_extensions{extensions} }) {
+    my $url = $decoded_extensions{extensions}{$ext_name}{url};
+    my $version = $decoded_extensions{extensions}{$ext_name}{version};
     my $web_version = $version_scraper->scrape(URI->new($url));
     print "$ext_name $version -> ";
 
@@ -42,9 +44,12 @@ foreach my $ext_name (keys %decoded_extensions) {
         $dl_url_ext =~ s/%s/$ext_id/i;
 
         my $dl_file = "./extension-files/$ext_name.crx";
+        if(!(-e "./extension-files")) {
+            mkdir "./extension-files";
+        }
         getstore($dl_url_ext, $dl_file);
 
-        $decoded_extensions{$ext_name}{version} = $web_version->{ver};
+        $decoded_extensions{extensions}{$ext_name}{version} = $web_version->{ver};
         $notify_update = 1;
     }
 
