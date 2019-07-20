@@ -20,7 +20,6 @@ my @urls = (
     "https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo", # Tampermonkey
     "https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm", # ublock origin
     "https://chrome.google.com/webstore/detail/ublock-origin-extra/pgdnlhfefecpicbbihgmbmffkjpaplco", # ublock origin extra
-
 );
 
 my @urlNames = (
@@ -48,8 +47,6 @@ close $handle;
 my $version = scraper {
     process_first ".C-b-p-D-Xe.h-C-b-p-D-md", ver => 'TEXT';
 };
-
-print color('reset');
 
 for my $i (0 .. $#urls) {
     my $url = $urls[$i];
