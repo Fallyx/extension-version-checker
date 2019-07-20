@@ -9,9 +9,11 @@ The first two steps are only needed for the first time usage
 * The content of the extensions.file should look like this:
 ```json
 {
-  "Extension name": {
-    "url": "https://chrome.google.com/webstore/detail/extension-name/aaaaaaaaaa",
-    "version": "your installed version"
+  "chrome-version": "75.0",
+  "extensions": {
+    "Extension name": {
+      "url": "https://chrome.google.com/webstore/detail/extension-name/aaaaaaaaaa",
+      "version": "your installed version" }
 }
 ```
 * Run the script
