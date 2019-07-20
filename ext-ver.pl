@@ -4,92 +4,58 @@ use warnings;
 
 use URI;
 use Encode;
+use JSON;
+use File::Slurp;
 use Web::Scraper;
 use Term::ANSIColor;
 use LWP::Simple;
 use Net::DBus;
 
-my $dlUrl = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=75.0&x=id%3D%s%26installsource%3Dondemand%26uc"; # %s needs to be replaced
+my $notify_update = 0;
 
-my @urls = (
-    "https://chrome.google.com/webstore/detail/4chan-x/ohnjgmpcibpbafdlkimncjhflgedgpam", # 4chan x
-    "https://chrome.google.com/webstore/detail/clearurls/lckanjgmijmafbedllaakclkaicjfmnk", #ClearURLs
-    "https://chrome.google.com/webstore/detail/decentraleyes/ldpochfccmkkmhdbclfhpagapcfdljkj", # Decentraleyes
-    "https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna", # New Tab Redirect
-    "https://chrome.google.com/webstore/detail/privacy-badger/pkehgijcmpdhfbdbbnkijodmdjhbjlgp", # Privacy Badger
-    "https://chrome.google.com/webstore/detail/stylus/clngdbkpkpeebahjckkjfobafhncgmne", # Stylus
-    "https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo", # Tampermonkey
-    "https://chrome.google.com/webstore/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm", # ublock origin
-    "https://chrome.google.com/webstore/detail/ublock-origin-extra/pgdnlhfefecpicbbihgmbmffkjpaplco", # ublock origin extra
-);
+# %s needs to be replaced
+my $dl_url = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=75.0&x=id%3D%s%26installsource%3Dondemand%26uc";
 
-my @urlNames = (
-    "4chan X",
-    "ClearURLs",
-    "Decentraleyes",
-    "New Tab Redirect",
-    "Privacy Badger",
-    "Stylus",
-    "Tampermonkey",
-    "uBlock origin",
-    "uBlock origin extra",
-);
+my $json_file = 'extensions.json';
+my $json_file_content = read_file($json_file);
+my $decoded_extensions_ref = decode_json($json_file_content);
+my %decoded_extensions = %$decoded_extensions_ref;
 
-my $notifyUpdate = 0;
-
-my $handle;
-my $file = "installed_version.txt";
-unless (open $handle, "<", $file) {
-    print STDERR "Could not open file";
-    return undef;
-}
-
-chomp (my @lines = <$handle>);
-close $handle;
-
-my $version = scraper {
+my $version_scraper = scraper {
     process_first ".C-b-p-D-Xe.h-C-b-p-D-md", ver => 'TEXT';
 };
 
-for my $i (0 .. $#urls) {
-    my $url = $urls[$i];
-    my $res = $version->scrape(URI->new($url));
-    print "$urlNames[$i]: $lines[$i] -> ";
+foreach my $ext_name (keys %decoded_extensions) {
+    my $url = $decoded_extensions{$ext_name}{url};
+    my $version = $decoded_extensions{$ext_name}{version};
+    my $web_version = $version_scraper->scrape(URI->new($url));
+    print "$ext_name $version -> ";
 
-    if ($res->{ver} eq $lines[$i]) {
+    if ($web_version->{ver} eq $version) {
         print color('green');
     } else {
         print color('red');
+        my $slash_pos = rindex($url, '/');
+        my $ext_id = substr($url, $slash_pos + 1);
 
-        my $slashPos = rindex($url, '/');
-        my $extId = substr($url, $slashPos + 1);
+        my $dl_url_ext = $dl_url;
+        $dl_url_ext =~ s/%s/$ext_id/i;
 
-        my $dlUrlextId = $dlUrl;
-        $dlUrlextId =~ s/%s/$extId/i;
+        my $dl_file = "./downloads/$ext_name.crx";
+        getstore($dl_url_ext, $dl_file);
 
-        my $dlFile = "./downloads/$urlNames[$i].crx";
-        getstore($dlUrlextId, $dlFile);
-
-        $lines[$i] = $res->{ver};
-        $notifyUpdate = 1;
+        $decoded_extensions{$ext_name}{version} = $web_version->{ver};
+        $notify_update = 1;
     }
 
-    print "$res->{ver}\n";
+    print "$web_version->{ver}\n";
     print color('reset');
 }
 
-unless (open $handle, '>', $file) {
-    print STDERR "Could not open file";
-    return undef;
-}
+my $encode_extensions = encode_json \%decoded_extensions;
+write_file($json_file, $encode_extensions);
 
-foreach (@lines) {
-    print $handle "$_\n";
-}
-
-close($handle);
-
-if ($notifyUpdate) {
+if ($notify_update) {
     my $bus = Net::DBus->session;
     my $srvc = $bus->get_service('org.freedesktop.Notifications');
     my $obj = $srvc->get_object('/org/freedesktop/Notifications');
