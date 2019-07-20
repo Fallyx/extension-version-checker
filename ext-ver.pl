@@ -41,7 +41,7 @@ foreach my $ext_name (keys %decoded_extensions) {
         my $dl_url_ext = $dl_url;
         $dl_url_ext =~ s/%s/$ext_id/i;
 
-        my $dl_file = "./downloads/$ext_name.crx";
+        my $dl_file = "./extension-files/$ext_name.crx";
         getstore($dl_url_ext, $dl_file);
 
         $decoded_extensions{$ext_name}{version} = $web_version->{ver};
