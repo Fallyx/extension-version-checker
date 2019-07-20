@@ -7,6 +7,7 @@ use Encode;
 use Web::Scraper;
 use Term::ANSIColor;
 use LWP::Simple;
+use Net::DBus;
 
 my $dlUrl = "https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=75.0&x=id%3D%s%26installsource%3Dondemand%26uc"; # %s needs to be replaced
 
@@ -33,6 +34,8 @@ my @urlNames = (
     "uBlock origin",
     "uBlock origin extra",
 );
+
+my $notifyUpdate = 0;
 
 my $handle;
 my $file = "installed_version.txt";
@@ -68,6 +71,7 @@ for my $i (0 .. $#urls) {
         getstore($dlUrlextId, $dlFile);
 
         $lines[$i] = $res->{ver};
+        $notifyUpdate = 1;
     }
 
     print "$res->{ver}\n";
@@ -84,3 +88,19 @@ foreach (@lines) {
 }
 
 close($handle);
+
+if ($notifyUpdate) {
+    my $bus = Net::DBus->session;
+    my $srvc = $bus->get_service('org.freedesktop.Notifications');
+    my $obj = $srvc->get_object('/org/freedesktop/Notifications');
+    my $id = $obj->Notify(
+        'ext-ver',
+        0,
+        'dialog-information',
+        'Extensions outdated',
+        "There is an update for one or more installed extensions.",
+        [],
+        {},
+        5000
+    );
+}
