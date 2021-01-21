@@ -6,7 +6,7 @@ This is only useful if you use ungoogled chromium, because there is currently no
 ## Usage
 The first two steps are only needed for the first time usage
 * Create extensions.json file
-* The content of the extensions.file should look like this:
+* The content of the extensions.json file should look like this:
 ```json
 {
   "chrome-version": "75.0",
